@@ -21,8 +21,8 @@ path = urlparser.path
 
 http_request = encode(args.m, host, port, path, args.h, args.b)
 
-print(f"HTTP Request:\n")
-print(http_request)
+# print(f"HTTP Request:\n")
+# print(http_request)
 
 # Establish a socket connection
 try:
@@ -32,7 +32,7 @@ try:
         response = s.recv(4096, socket.MSG_WAITALL)
         s.close() 
     # Print the response
-    print(f"HTTP Response:\n")
+    # print(f"HTTP Response:\n")
     print(response.decode("utf-8"))
 except Exception as e:
     print(f"Socket error: {e}")
