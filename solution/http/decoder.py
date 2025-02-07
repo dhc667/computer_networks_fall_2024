@@ -29,17 +29,15 @@ class HTTPDecoder():
     status: int | None
     headers: dict[str, str]
     body: bytes | None
+    
+    partial_path: str | None
+    path: str | None
 
     def __init__(self, source: bytes) -> None:
         self.source = source
         self.current_index = 0
-        self.finished_parsing = False 
+        self.decoder_status = HTTPDecoderStatus.Initial
 
-    def parse_response_line(self) -> re.Match[str] | None:
-        pass
-
-    def parse_request_line(self) -> re.Match[str] | None:
-        pass
 
 
 
