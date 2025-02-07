@@ -1,6 +1,7 @@
 import re
 from enum import Enum
 
+from solution.http.request import Method
 from solution.http.response import StatusCode
 
 # NOTE: Re example:
@@ -18,9 +19,10 @@ class HTTPDecoderStatus(Enum):
     ParsingHeaders = 'ParsingHeaders'
     ParsingBody = 'ParsingBody'
 
+    Finished = 'Finished'
 
 class HTTPDecoder():
-    source: bytes
+    source: str
     current_index: int
     decoder_status: HTTPDecoderStatus
 
@@ -29,16 +31,17 @@ class HTTPDecoder():
     status: int | None
     headers: dict[str, str]
     body: bytes | None
-    
+
     partial_path: str | None
     path: str | None
 
     def __init__(self, source: bytes) -> None:
-        self.source = source
+        self.source = source.decode('utf-8')
         self.current_index = 0
         self.decoder_status = HTTPDecoderStatus.Initial
 
 
-
+    def add_chunk(self, chunk: bytes) -> None:
+        pass
 
 
