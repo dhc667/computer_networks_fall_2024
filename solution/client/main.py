@@ -1,7 +1,7 @@
 import socket
 from urlparser import urlparser
 from argparser_builder import get_parser
-from http_encoder import encode
+from http_encoder import encode_http_request
 
 
 parser = get_parser()
@@ -19,7 +19,7 @@ path = urlparser.path
 # print(f"Port: {port}")
 # print(f"Path: {path}")
 
-http_request = encode(args.m, host, port, path, args.h, args.b)
+http_request = encode_http_request(args.m, host, port, path, args.h, args.b)
 
 # print(f"HTTP Request:\n")
 # print(http_request)

@@ -1,13 +1,8 @@
 import json
 
-valid_methods = ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS", "CONNECT", "TRACE"]
 
-def encode(method, host, port, path, headers, data):
+def encode_http_request(method, host, port, path, headers, data):
     header_lines = []
-
-    # Validate the method
-    if method not in valid_methods:
-        raise ValueError(f"Invalid method: {method}")
 
     if headers:
         try:
