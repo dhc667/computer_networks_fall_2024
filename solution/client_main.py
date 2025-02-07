@@ -20,7 +20,7 @@ path = urlparser.path
 # print(f"Port: {port}")
 # print(f"Path: {path}")
 
-http_request = encode_http_request(args.m, host, port, path, args.h, args.b)
+http_request = encode_http_request(args.m, host, port, path, args.h, args.d)
 # print(f"HTTP Request:\n")
 # print(http_request)
 

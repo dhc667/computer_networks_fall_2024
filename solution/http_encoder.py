@@ -1,13 +1,14 @@
 import json
 
 
-def encode_http_request(method, host, port, path, headers, data):
+def encode_http_request(method: str, host: str, port: int, path: str, headers: str, data: str):
     header_lines = []
 
     if headers:
+        headers = headers.replace("\\ ", "")
         try:
-            headers = json.loads(headers)
-            for key, value in headers.items():
+            header_dict = json.loads(headers)
+            for key, value in header_dict.items():
                 header_lines.append(f"{key}: {value}")
         except Exception as e:
             print(f"Invalid headers format: {e}")
