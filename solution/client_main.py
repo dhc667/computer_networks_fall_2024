@@ -1,13 +1,15 @@
 import json
 import socket
+import sys
 from client_urlparser import urlparser
-from client_argparser_builder import get_parser
 from http_encoder import encode_http_request
 from http_decoder import decode_http
 from http_response import HTTPResponse
-parser = get_parser()
-args = parser.parse_args()
-urlparser = urlparser(args.u)
+from client_argparser_builder import parse_args
+
+args = sys.argv[1:]
+args = parse_args(args)
+urlparser = urlparser(args.url)
 
 host = urlparser.host
 port = urlparser.port
@@ -20,7 +22,7 @@ path = urlparser.path
 # print(f"Port: {port}")
 # print(f"Path: {path}")
 
-http_request = encode_http_request(args.m, host, port, path, args.h, args.d)
+http_request = encode_http_request(args.method, host, port, path, args.headers, args.data)
 # print(f"HTTP Request:\n")
 # print(http_request)
 

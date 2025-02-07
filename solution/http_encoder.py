@@ -1,7 +1,7 @@
 import json
 
 
-def encode_http_request(method: str, host: str, port: int, path: str, headers: str, data: str):
+def encode_http_request(method: str, host: str, port: int, path: str, headers: str | None, data: str | None):
     header_lines = []
 
     if headers:

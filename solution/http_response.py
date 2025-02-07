@@ -11,7 +11,8 @@ class StatusCode(Enum):
 
 class HTTPResponse:
     def __init__(self, version: str, status: int, headers: dict[str, str], body: bytes | None):
+        if body == None: body = b""
         self.version = version
         self.status = status
         self.headers = headers
-        self.body = body
+        self.body: bytes = body
