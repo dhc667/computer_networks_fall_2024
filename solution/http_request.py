@@ -1,5 +1,4 @@
 from enum import Enum
-from solution.http.decoder import HTTPDecoder
 
 class Method(Enum):
     GET = 'GET'
@@ -13,7 +12,7 @@ class Method(Enum):
     TRACE = 'TRACE'
 
 class HTTPRequest:
-    def __init__(self, version: str, method: Method, headers: dict, body: str):
+    def __init__(self, version: str, method: Method, headers: dict, body: bytes):
         self.version = version
         self.method = method
         self.headers = headers

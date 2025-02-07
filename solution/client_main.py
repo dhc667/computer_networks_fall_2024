@@ -1,9 +1,10 @@
+import json
 import socket
-from urlparser import urlparser
-from argparser_builder import get_parser
+from client_urlparser import urlparser
+from client_argparser_builder import get_parser
 from http_encoder import encode_http_request
-
-
+from http_decoder import decode_http
+from http_response import HTTPResponse
 parser = get_parser()
 args = parser.parse_args()
 urlparser = urlparser(args.u)
@@ -20,20 +21,36 @@ path = urlparser.path
 # print(f"Path: {path}")
 
 http_request = encode_http_request(args.m, host, port, path, args.h, args.b)
-
 # print(f"HTTP Request:\n")
 # print(http_request)
+
+def get_all_data(socket: socket.socket, buffer_size: int):
+    data = socket.recv(buffer_size)
+    answ = b""
+    while(len(data) == buffer_size):
+        answ += data
+        data = socket.recv(buffer_size)
+    answ += data
+
+    return answ
 
 # Establish a socket connection
 try:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((host, port))
         s.sendall(bytes(http_request, "utf-8"))
-        response = s.recv(4096, socket.MSG_WAITALL)
-        s.close() 
-    # Print the response
-    # print(f"HTTP Response:\n")
-    print(response.decode("utf-8"))
+        response = get_all_data(s, 1024)
+        s.close()
+
+    response: HTTPResponse = decode_http(response)
+
+    print(json.dumps({
+        "status": response.status,
+        "body": response.body.decode("utf-8"),
+        "headers": response.headers
+    }))
+        
+
 except Exception as e:
     print(f"Socket error: {e}")
 

@@ -1,4 +1,4 @@
-from client.argparser_builder import get_parser
+from client_argparser_builder import get_parser
 
 def test_get_parser_1():
     parser = get_parser()

@@ -1,4 +1,4 @@
-from client.urlparser import urlparser
+from client_urlparser import urlparser
 
 def test_1():
     up = urlparser("http://www.google.com")
