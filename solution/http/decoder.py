@@ -36,29 +36,10 @@ class HTTPDecoder():
         self.finished_parsing = False 
 
     def parse_response_line(self) -> re.Match[str] | None:
-
-        http_version = r'HTTP/1.[10]'
-        status = r'(?P<status>[0-9]{3})(?P<status_desc>[A-Za-z])'
-
-        match = re.match(http_version + ' ' + status, self.source[self.current_index:])
-
-        return match
+        pass
 
     def parse_request_line(self) -> re.Match[str] | None:
-
-        http_version = r'HTTP/1.[10]'
-        method = '(' + '|'.join([item.value for item in Method]) + ')'
-        request_target = 
-
-def decode_http_request(request: bytes):
-    
-    header_field = r'(?P<key>):()'
-
-    # NOTE: We only expect a single space character as the separator, we could parse more
-    #       but lenient pasing can introduce vulnerabilities
-    http_regexp = f'^{http_version} {status}'
-
-    pattern = re.copile()
+        pass
 
 
 
