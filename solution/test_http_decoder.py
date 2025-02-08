@@ -1,11 +1,11 @@
 from http_decoder import HTTPDecoder, HTTPDecoderStatus
-from http_request import Method
+from http_request import HTTPMethod
 
 def test_1():
     source = b'GET / HTTP/1.1\r\nhost: localhost:8080\r\n\r\n'
     decoder = HTTPDecoder(source)
     assert decoder.decoder_status == HTTPDecoderStatus.Finished
-    assert decoder.method == Method.GET
+    assert decoder.method == HTTPMethod.GET
     assert decoder.path == '/'
     assert decoder.http_version == 'HTTP/1.1'
     assert decoder.headers == {'host': 'localhost:8080'}
@@ -15,7 +15,7 @@ def test_2():
     source = b'GET / HTTP/1.1\r\nhost: localhost:8080\r\ncontent-length: 5\r\n\r\nHello'
     decoder = HTTPDecoder(source)
     assert decoder.decoder_status == HTTPDecoderStatus.Finished
-    assert decoder.method == Method.GET
+    assert decoder.method == HTTPMethod.GET
     assert decoder.path == '/'
     assert decoder.http_version == 'HTTP/1.1'
     assert decoder.headers == {'host': 'localhost:8080', 'content-length': '5'}
@@ -31,7 +31,7 @@ def test_4():
     source = b'GET /testing/a/long/path HTTP/1.1\r\nhost: localhost:8080\r\ncontent-length: 5\r\n\r\nHello'
     decoder = HTTPDecoder(source)
     assert decoder.decoder_status == HTTPDecoderStatus.Finished
-    assert decoder.method == Method.GET
+    assert decoder.method == HTTPMethod.GET
     assert decoder.path == '/testing/a/long/path'
     assert decoder.http_version == 'HTTP/1.1'
     assert decoder.headers == {'host': 'localhost:8080', 'content-length': '5'}
@@ -41,7 +41,7 @@ def test_handles_several_headers():
     source = b'GET / HTTP/1.1\r\nhost: localhost:8080\r\ncontent-length: 5\r\ncontent-type: text/plain\r\n\r\nHello'
     decoder = HTTPDecoder(source)
     assert decoder.decoder_status == HTTPDecoderStatus.Finished
-    assert decoder.method == Method.GET
+    assert decoder.method == HTTPMethod.GET
     assert decoder.path == '/'
     assert decoder.http_version == 'HTTP/1.1'
     assert decoder.headers == {'host': 'localhost:8080', 'content-length': '5', 'content-type': 'text/plain'}
@@ -66,7 +66,7 @@ def test_header_names_case_insensitive():
     source = b'GET / HTTP/1.1\r\nhost: localhost:8080\r\ncontent-length: 5\r\ncontent-type: text/plain\r\n\r\nHello'
     decoder = HTTPDecoder(source)
     assert decoder.decoder_status == HTTPDecoderStatus.Finished
-    assert decoder.method == Method.GET
+    assert decoder.method == HTTPMethod.GET
     assert decoder.path == '/'
     assert decoder.http_version == 'HTTP/1.1'
     assert decoder.headers == {'host': 'localhost:8080', 'content-length': '5', 'content-type': 'text/plain'}

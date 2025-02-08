@@ -1,8 +1,8 @@
 import re
 from enum import Enum
-from socket import error
-from http_request import HTTPRequest, Method
+from http_request import HTTPRequest, HTTPMethod
 from http_response import HTTPResponse
+from http_versions import HTTPVersion
 
 # NOTE: Re example:
 # pattern = re.compile(r'^http://(?P<host>[^:/]+)(?::(?P<port>\d+))?(?P<path>/.*)?$')
@@ -21,10 +21,8 @@ class HTTPType(Enum):
     Response = 'Response'
     Request = 'Request'
 
-LONGEST_METHOD_LENGTH = max([len(elem.value) for elem in Method])
-
 class HTTPDecoder():
-    METHOD_RE = re.compile('(' + '|'.join([m.value for m in Method]) + ')')
+    METHOD_RE = re.compile('(' + '|'.join([m.value for m in HTTPMethod]) + ')')
     VERSION_RE = re.compile(r'HTTP/1.[01]')
     PATH_RE = re.compile(r'[^\s]+')
     STATUS_CODE_RE = re.compile(r'\d{3}')
@@ -41,7 +39,7 @@ class HTTPDecoder():
         self.decoder_status = HTTPDecoderStatus.Initial
 
         self.http_version: str
-        self.method: Method | None = None
+        self.method: HTTPMethod | None = None
         self.status: int | None = None
         self.headers: dict[str, str] = {}
         self.body: bytes
@@ -96,7 +94,7 @@ class HTTPDecoder():
 
     #  NOTE: request-line = method SP request-target SP HTTP-version
     def parse_request_line(self, method: str):
-        self.method = list(filter(lambda m: m.value == method, [m for m in Method]))[0]
+        self.method = HTTPMethod.from_str(method)
         if not self.match_SP():
             self.set_error_status()
         
@@ -199,19 +197,23 @@ class HTTPDecoder():
         if i == None: i = self.current_index
         return i >= len(self.source)
 
-def decode_http(source: bytes) -> HTTPRequest | HTTPResponse | None:
-    decoder = HTTPDecoder(source)
-    if decoder.decoder_status == HTTPDecoderStatus.Error: return None
+# def decode_http(source: bytes) -> HTTPRequest | HTTPResponse | None:
+#     decoder = HTTPDecoder(source)
+#     if decoder.decoder_status == HTTPDecoderStatus.Error: return None
+    
+#     version_match = list(filter(lambda v: v.value == decoder.http_version, [v for v in HTTPVersion]))
+#     if len(version_match) != 1:
+#         return None
+    
 
+#     if decoder.type == HTTPType.Request:
+#         if decoder.method == None: raise RuntimeError()
+#         if decoder.body == None: raise RuntimeError()
+#         return HTTPRequest(version_match[0], decoder.method, decoder.headers, decoder.body)
 
-    if decoder.type == HTTPType.Request:
-        if decoder.method == None: raise RuntimeError()
-        if decoder.body == None: raise RuntimeError()
-        return HTTPRequest(decoder.http_version, decoder.method, decoder.headers, decoder.body)
-
-    if decoder.type == HTTPType.Response:
-        if decoder.status == None: raise RuntimeError()
-        if decoder.body == None: raise RuntimeError()
-        return HTTPResponse(decoder.http_version, decoder.status, decoder.headers, decoder.body)
+#     if decoder.type == HTTPType.Response:
+#         if decoder.status == None: raise RuntimeError()
+#         if decoder.body == None: raise RuntimeError()
+#         return HTTPResponse(version_match[0], decoder.status, decoder.headers, decoder.body)
 
 

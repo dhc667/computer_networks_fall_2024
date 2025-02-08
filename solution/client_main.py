@@ -3,9 +3,15 @@ import socket
 import sys
 from client_urlparser import urlparser
 from http_encoder import encode_http_request
-from http_decoder import decode_http
+from http_decoder import HTTPDecoder
 from http_response import HTTPResponse
+from http_request import HTTPMethod
 from client_argparser_builder import parse_args
+from http_versions import HTTPVersion
+
+def decode_http(data: bytes) -> HTTPResponse:
+    decoder = HTTPDecoder(data)
+    return HTTPResponse(HTTPVersion.from_str(decoder.http_version), decoder.status, decoder.headers, decoder.body)
 
 args = sys.argv[1:]
 args = parse_args(args)
@@ -22,7 +28,7 @@ path = urlparser.path
 # print(f"Port: {port}")
 # print(f"Path: {path}")
 
-http_request = encode_http_request(args.method, host, port, path, args.headers, args.data)
+http_request = encode_http_request(HTTPVersion.HTTP1_1, HTTPMethod.from_str(args.method), host, port, path, args.headers, args.data)
 # print(f"HTTP Request:\n")
 # print(http_request)
 

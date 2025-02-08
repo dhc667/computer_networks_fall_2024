@@ -1,34 +1,45 @@
 import json
 
+from http_request import HTTPMethod
+from http_versions import HTTPVersion
 
-def encode_http_request(method: str, host: str, port: int, path: str, headers: str | None, data: str | None):
+def encode_http(start_line: str, headers: dict, body: str | None):
     header_lines = []
-
-    if headers:
-        headers = headers.replace("\\ ", "")
-        try:
-            header_dict = json.loads(headers)
-            for key, value in header_dict.items():
-                header_lines.append(f"{key}: {value}")
-        except Exception as e:
-            print(f"Invalid headers format: {e}")
+    for key, value in headers.items():
+        header_lines.append(f"{key}: {value}")
 
     header_str = "\r\n".join(header_lines)
-    content_length = f"Content-Length: {len(data)}" if data else ""
+    content_length = f"Content-Length: {len(body)}" if body else ""
 
-    # Create the HTTP request
-    http_request = f"{method} {path} HTTP/1.1\r\nHost: {host}\r\n"
+    # Create the HTTP response
+    http_response = f"{start_line}\r\n"
 
     if header_str:
-        http_request += f"{header_str}\r\n"
+        http_response += f"{header_str}\r\n"
     if content_length:
-        http_request += f"{content_length}\r\n"
-    if data: 
-        http_request += f"\r\n{data}\r\n"
+        http_response += f"{content_length}\r\n"
+    if body:
+        http_response += f"\r\n{body}\r\n"
     else:
-        http_request += "\r\n"
+        http_response += "\r\n"
 
-    return http_request
+    return http_response
+
+def encode_http_response(version: HTTPVersion, status_code: int, headers: dict, body: str | None):
+    status_line = f"{version.value} {status_code}\r\n"
+    return encode_http(status_line, headers, body)
+
+def encode_http_request(version: HTTPVersion, method: HTTPMethod, host: str, port: int, path: str, headers: str | None, body: str | None):
+    request_line = f"{method.value} {path} {version.value}\r\n"
+    
+    if headers is None:
+        headers = "{}"
+
+    headers = headers.replace("\\ ", " ")
+
+    parsed_headers = json.loads(headers)
+    parsed_headers["Host"] = f"{host}:{port}"
+    return encode_http(request_line, parsed_headers, body)
 
 
 
