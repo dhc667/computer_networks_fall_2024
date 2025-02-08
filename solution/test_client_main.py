@@ -25,6 +25,16 @@ def test_head_root():
     response = make_request("HEAD", "/")
     assert response['status'] == 200
 
+def test_malformed_json_body():
+    response = make_request(
+        "GET",
+        "/secure",
+        headers='{\\"Authorization\\":\\ \\"Bearer\\ 12345\\",\\ \\"Content-Type\\":\\ \\"application/json\\"}',
+        data='{"key":}'
+    )
 
+    assert response['status'] == 404
 
-
+def test_unimplemented_method():
+    response = make_request("PATCH", "/")
+    assert response['status'] == 501

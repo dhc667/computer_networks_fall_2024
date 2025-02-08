@@ -12,7 +12,7 @@ from solution.server_endpoint import Endpoint
 
 
 class Server:
-    def __init__(self, ip, port, listen=4, http_version: HTTPVersion = HTTPVersion.HTTP1_1):
+    def __init__(self, ip, port, listen=4, http_version: str = HTTPVersion.HTTP1_1.value):
         self.ip = ip
         self.port = port
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -53,11 +53,9 @@ class Server:
         assert decoder.method is not None
         assert decoder.path is not None
         assert decoder.http_version is not None
-        http_version_enum = HTTPVersion.from_str(decoder.http_version)
-        assert http_version_enum is not None
         assert decoder.headers is not None
 
-        request: HTTPRequest = HTTPRequest(http_version_enum, decoder.method, decoder.path, decoder.headers, decoder.body)
+        request: HTTPRequest = HTTPRequest(decoder.http_version, decoder.method, decoder.path, decoder.headers, decoder.body)
 
         method = request.method
         path = request.path

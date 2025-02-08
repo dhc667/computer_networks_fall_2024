@@ -1,6 +1,6 @@
 import re
 from enum import Enum
-from http_request import HTTPRequest, HTTPMethod
+from http_request import HTTPRequest
 from http_response import HTTPResponse
 from http_versions import HTTPVersion
 
@@ -22,7 +22,7 @@ class HTTPType(Enum):
     Request = 'Request'
 
 class HTTPDecoder():
-    METHOD_RE = re.compile('(' + '|'.join([m.value for m in HTTPMethod]) + ')')
+    METHOD_RE = re.compile(r'[A-Za-z]+')
     VERSION_RE = re.compile(r'HTTP/1.[01]')
     PATH_RE = re.compile(r'[^\s]+')
     STATUS_CODE_RE = re.compile(r'\d{3}')
@@ -39,7 +39,7 @@ class HTTPDecoder():
         self.decoder_status = HTTPDecoderStatus.Initial
 
         self.http_version: str
-        self.method: HTTPMethod | None = None
+        self.method: str | None = None
         self.status: int | None = None
         self.headers: dict[str, str] = {}
         self.body: bytes
@@ -76,7 +76,7 @@ class HTTPDecoder():
     #        status-line = HTTP-version SP status-code SP [ reason-phrase ]
     def parse_start_line(self):
         method = self.METHOD_RE.match(self.source, pos=self.current_index)
-        if method:
+        if method and self.at_space(method.end()):
             self.current_index = method.end()
             self.parse_request_line(method.group())
             self.type = HTTPType.Request
@@ -94,7 +94,7 @@ class HTTPDecoder():
 
     #  NOTE: request-line = method SP request-target SP HTTP-version
     def parse_request_line(self, method: str):
-        self.method = HTTPMethod.from_str(method)
+        self.method = method
         if not self.match_SP():
             self.set_error_status()
         
