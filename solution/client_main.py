@@ -20,16 +20,9 @@ host = urlparser.host
 port = urlparser.port
 path = urlparser.path
 
-# print(f"Method: {args.m}")
-# print(f"Headers: {args.h}")
-# print(f"Body: {args.data}")
-# print(f"Host: {host}")
-# print(f"Port: {port}")
-# print(f"Path: {path}")
 
 http_request = encode_http_request(HTTPVersion.HTTP1_1.value, args.method, host, port, path, args.headers, args.data)
-# print(f"HTTP Request:\n")
-# print(http_request)
+
 
 def get_all_data(socket: socket.socket, buffer_size: int):
     data = socket.recv(buffer_size)

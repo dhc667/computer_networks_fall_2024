@@ -16,7 +16,7 @@ def encode_http(start_line: str, headers: dict, body: str | None):
     if content_length:
         http_response += f"{content_length}\r\n"
     if body:
-        http_response += f"\r\n{body}\r\n"
+        http_response += f"\r\n{body}"
     else:
         http_response += "\r\n"
 
@@ -28,7 +28,7 @@ def encode_http_response(version: str, status_code: int, headers: dict, body: st
     return encode_http(status_line, headers, body)
 
 def encode_http_request(version: str, method: str, host: str, port: int, path: str, headers: str | None, body: str | None):
-    request_line = f"{method} {path} {version}\r\n"
+    request_line = f"{method} {path} {version}"
     
     if headers is None:
         headers = "{}"
