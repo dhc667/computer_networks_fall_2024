@@ -11,6 +11,13 @@ class HTTPDecoderStatus(Enum):
     Error = 'Error'
     Initial = 'Initial'
     Finished = 'Finished'
+    ParsingMethod = 'ParsingMethod'
+    ParsingPath = 'ParsingPath'
+    ParsingVersion = 'ParsingVersion'
+    ParsingStatusCode = 'ParsingStatusCode'
+    ParsingStatusDesc = 'ParsingStatusDesc'
+    ParsingHeader = 'ParsingHeader'
+
 
 class ParseletStatus(Enum):
     Unknown = 'Unknown'
@@ -38,18 +45,21 @@ class HTTPDecoder():
         self.current_index = 0
         self.decoder_status = HTTPDecoderStatus.Initial
 
-        self.http_version: str
+        self.http_version: str | None = None
         self.method: str | None = None
         self.status: int | None = None
         self.headers: dict[str, str] = {}
-        self.body: bytes
+        self.body: bytes | None = None
 
         self.path: str | None = None
 
-        self.type: HTTPType
+        self.type: HTTPType | None = None
 
         self.parse()
 
+    def add_chunk(self, chunk: bytes):
+        pass
+    
     def parse(self):
         def error_occurred(): return self.decoder_status == HTTPDecoderStatus.Error
         
