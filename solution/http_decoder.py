@@ -54,7 +54,7 @@ class HTTPDecoder():
         self.path: str | None = None
 
         self.type: HTTPType | None = None
-
+        self.remainder : b""
         self.parse()
 
     def add_chunk(self, chunk: bytes):
