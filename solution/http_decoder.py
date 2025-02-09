@@ -1,202 +1,491 @@
+from __future__ import annotations
 import re
 from enum import Enum
-from http_request import HTTPRequest
-from http_response import HTTPResponse
-from http_versions import HTTPVersion
+from typing import Counter
 
 # NOTE: Re example:
 # pattern = re.compile(r'^http://(?P<host>[^:/]+)(?::(?P<port>\d+))?(?P<path>/.*)?$')
 
 class HTTPDecoderStatus(Enum):
     Error = 'Error'
-    Initial = 'Initial'
     Finished = 'Finished'
-    ParsingMethod = 'ParsingMethod'
-    ParsingPath = 'ParsingPath'
-    ParsingVersion = 'ParsingVersion'
-    ParsingStatusCode = 'ParsingStatusCode'
-    ParsingStatusDesc = 'ParsingStatusDesc'
-    ParsingHeader = 'ParsingHeader'
-
+    ParsingStartLine = 'ParsingStartLine'
+    ParsingHeaders = 'ParsingHeaders'
 
 class ParseletStatus(Enum):
     Unknown = 'Unknown'
-    Finished = 'Finished'
+    Accepted = 'Accepted'
     Error = 'Error'
+
+class ParseletResponse:
+    def __init__(self, status: ParseletStatus, content: str | None, end: int | None) -> None:
+        self.status = status
+        self.content = content
+        self.end = end
+
+    @staticmethod
+    def make_unknown():
+        return ParseletResponse(ParseletStatus.Unknown, None, None)
+
+    @staticmethod
+    def make_error():
+        return ParseletResponse(ParseletStatus.Error, None, None)
+
+    def is_error(self):
+        return self.status == ParseletStatus.Error
+
+    def is_unknown(self):
+        return self.status == ParseletStatus.Unknown
+    
+
+    def is_accepted(self):
+        return self.status == ParseletStatus.Accepted
 
 class HTTPType(Enum):
     Response = 'Response'
     Request = 'Request'
 
 class HTTPDecoder():
-    METHOD_RE = re.compile(r'[A-Za-z]+')
-    VERSION_RE = re.compile(r'HTTP/1.[01]')
-    PATH_RE = re.compile(r'[^\s]+')
-    STATUS_CODE_RE = re.compile(r'\d{3}')
-    STATUS_DESC_RE = re.compile(r'[^\r\n]*')
-    
-    #  NOTE: RFC: Each field line consists of a case-insensitive field name followed by a colon (":"), optional leading whitespace, the field line value, and optional trailing whitespace.
-    HEADER_RE = re.compile(r'(?P<key>[^\s]+):[\t ]*(?P<value>[^\r\n]+)[\t ]*')
-
-
 
     def __init__(self, source: bytes) -> None:
         self.source = source.decode('utf-8')
         self.current_index = 0
-        self.decoder_status = HTTPDecoderStatus.Initial
+        self.decoder_status = HTTPDecoderStatus.ParsingStartLine
 
         self.http_version: str | None = None
         self.method: str | None = None
         self.status: int | None = None
         self.headers: dict[str, str] = {}
-        self.body: bytes | None = None
 
         self.path: str | None = None
 
         self.type: HTTPType | None = None
-        self.remainder : b""
         self.parse()
-
-    def add_chunk(self, chunk: bytes):
-        pass
     
-    def parse(self):
-        def error_occurred(): return self.decoder_status == HTTPDecoderStatus.Error
-        
-        self.parse_start_line()
-        if error_occurred(): return
-        
-        if not self.match_CRLF():
-            self.set_error_status()
-            return
-
-
-        self.parse_headers()
-        if error_occurred(): return
-
-        if not self.match_CRLF():
-            self.set_error_status()
-            return
-
-        self.body = self.source[self.current_index:].encode('utf-8')
-
-        self.decoder_status = HTTPDecoderStatus.Finished
-
     #  NOTE: request-line = method SP request-target SP HTTP-version
     #        status-line = HTTP-version SP status-code SP [ reason-phrase ]
-    def parse_start_line(self):
-        method = self.METHOD_RE.match(self.source, pos=self.current_index)
-        if method and self.at_space(method.end()):
-            self.current_index = method.end()
-            self.parse_request_line(method.group())
-            self.type = HTTPType.Request
-            return
 
-        version = self.VERSION_RE.match(self.source, pos=self.current_index)
-        if version:
-            self.current_index = version.end()
-            self.parse_status_line(version.group())
-            self.type = HTTPType.Response
-            return
+    @property
+    def remainder(self):
+        return self.source[self.current_index:].encode('utf-8')
 
-        self.set_error_status()
+    def parse(self) -> None:
+        parsing_start_line = lambda: self.decoder_status == HTTPDecoderStatus.ParsingStartLine
+        parsing_headers = lambda: self.decoder_status == HTTPDecoderStatus.ParsingHeaders
 
-
-    #  NOTE: request-line = method SP request-target SP HTTP-version
-    def parse_request_line(self, method: str):
-        self.method = method
-        if not self.match_SP():
-            self.set_error_status()
-        
-        path = self.PATH_RE.match(self.source, pos=self.current_index)
-        if not path:
-            self.set_error_status()
-            return 
-
-        self.path = path.group()
-
-        self.current_index = path.end()
-
-        if not self.match_SP():
-            self.set_error_status()
-            return
-
-        version = self.VERSION_RE.match(self.source, pos=self.current_index)
-        if not version:
-            self.set_error_status()
-            return
-        
-        self.http_version = version.group()
-
-        self.current_index = version.end()
-
-
-    #  NOTE: status-line = HTTP-version SP status-code SP [ reason-phrase ]
-    def parse_status_line(self, version: str):
-        self.http_version = version
-        
-        if not self.match_SP():
-            self.set_error_status()
-            return
-
-        code = self.STATUS_CODE_RE.match(self.source, pos=self.current_index)
-        if not code:
-            self.set_error_status()
-            return
-
-        self.current_index = code.end()
-        self.status = int(code.group())
-
-        if not self.match_SP():
-            self.set_error_status()
-            return
-
-        status_desc = self.STATUS_DESC_RE.match(self.source, pos=self.current_index)
-        if not status_desc:
-            self.set_error_status()
-            return
-
-        # we ignore status desc
-
-        self.current_index = status_desc.end()
-        
-    def parse_headers(self):
-        def at_CRLF(): return re.match(r'\r\n', self.source[self.current_index:]) != None 
-        
-        while(not at_CRLF()):
-            header = self.HEADER_RE.match(self.source, self.current_index)
-            if not header:
+        if parsing_start_line():
+            start_line_parselet_response = self.parse_start_line(self.current_index)
+            if start_line_parselet_response.is_error():
                 self.set_error_status()
                 return
-            key = header.group('key').lower()
-            value = header.group('value')
             
-            self.current_index = header.end()
+            if start_line_parselet_response.is_unknown():
+                return
 
-            self.headers[key] = value
+            self.decoder_status = HTTPDecoderStatus.ParsingHeaders
 
-            if not self.match_CRLF():
+        if parsing_headers():
+            header_parselet_response = self.parse_headers_no_content(self.current_index)
+
+            if header_parselet_response.is_error():
                 self.set_error_status()
-                return            
+                return
 
+            if header_parselet_response.is_unknown():
+                return
+            
+            self.decoder_status = HTTPDecoderStatus.Finished
+    
+    def parse_start_line(self, i: int) -> ParseletResponse:
+        version_parselet_response = self.parse_version(i)
+        if version_parselet_response.is_accepted():
+            assert version_parselet_response.end != None
+            i = version_parselet_response.end
+
+            assert version_parselet_response.content != None
+        
+            self.type = HTTPType.Response
+
+            response_line_parselet_response = self.parse_response_line_no_content(i, version_parselet_response.content)
+
+            if response_line_parselet_response.is_accepted():
+                assert response_line_parselet_response.end != None
+                self.current_index = response_line_parselet_response.end
+
+            return response_line_parselet_response
+
+        if version_parselet_response.is_unknown():
+            return version_parselet_response
+
+        method_parselet_response = self.parse_method(i)
+        if method_parselet_response.is_accepted():
+            assert method_parselet_response.end != None
+            i = method_parselet_response.end
+            assert method_parselet_response.content != None
+
+            self.type = HTTPType.Request
+
+            request_line_parselet_response = self.parse_request_line_no_content(i, method_parselet_response.content)
+    
+            if request_line_parselet_response.is_accepted():
+                assert request_line_parselet_response.end != None
+                self.current_index = request_line_parselet_response.end
+
+            return request_line_parselet_response
+
+        return method_parselet_response
+
+    def parse_request_line_no_content(self, i: int, method: str) -> ParseletResponse:
+        if self.at_eof(i):
+            return ParseletResponse.make_unknown()
+
+        sp_match = self.match_sp(i)
+        if not sp_match:
+            return ParseletResponse.make_error()
+
+        _, i = sp_match
+
+        path_parselet_response = self.parse_path(i)
+        if not path_parselet_response.is_accepted():
+            return path_parselet_response
+
+        assert path_parselet_response.end != None
+        i = path_parselet_response.end
+
+        if self.at_eof(i):
+            return ParseletResponse.make_unknown()
+
+        sp_match = self.match_sp(i)
+        if not sp_match:
+            return ParseletResponse.make_error()
+
+        _, i = sp_match
+
+        version_parselet_response = self.parse_version(i)
+        if not version_parselet_response.is_accepted():
+            return version_parselet_response
+
+        assert version_parselet_response.end != None
+        i = version_parselet_response.end
+
+        crlf_parselet_response = self.parse_CRLF(i)
+        if not crlf_parselet_response.is_accepted():
+            return crlf_parselet_response
+
+        assert crlf_parselet_response.end != None
+        i = crlf_parselet_response.end
+
+        version = version_parselet_response.content
+        assert version != None
+
+        path = path_parselet_response.content
+        assert path != None
+
+        self.method = method
+        self.path = path
+        self.http_version = version
+        self.current_index = i
+
+        return ParseletResponse(ParseletStatus.Accepted, None, i)
+
+    def parse_response_line_no_content(self, i: int, version: str) -> ParseletResponse:
+        if self.at_eof(i):
+            return ParseletResponse.make_unknown()
+
+        sp_match = self.match_sp(i)
+        if not sp_match:
+            return ParseletResponse.make_error()
+
+        _, i = sp_match
+
+        status_code_parselet_response = self.parse_status_code(i)
+        if not status_code_parselet_response.is_accepted():
+            return status_code_parselet_response
+
+        assert status_code_parselet_response.end != None
+        i = status_code_parselet_response.end
+
+        if self.at_eof(i):
+            return ParseletResponse.make_unknown()
+
+        sp_match = self.match_sp(i)
+        if not sp_match:
+            return ParseletResponse.make_error()
+
+        _, i = sp_match
+
+        reason_phrase_parselet_response = self.parse_reason_phrase(i)
+        if not reason_phrase_parselet_response.is_accepted():
+            return reason_phrase_parselet_response
+
+        assert reason_phrase_parselet_response.end != None
+        i = reason_phrase_parselet_response.end
+
+        crlf_parselet_response = self.parse_CRLF(i)
+        if not crlf_parselet_response.is_accepted():
+            return crlf_parselet_response
+
+        assert crlf_parselet_response.end != None
+        i = crlf_parselet_response.end
+
+        reason_phrase = reason_phrase_parselet_response.content
+        assert reason_phrase != None
+
+        status = status_code_parselet_response.content
+        assert status != None
+
+        self.http_version = version
+        self.status = int(status) 
+        self.current_index = i
+
+        return ParseletResponse(ParseletStatus.Accepted, None, i)
+
+    def parse_headers_no_content(self, i: int) -> ParseletResponse:
+        while(True):
+            crlf_parselet_response = self.parse_CRLF(i)
+
+            if crlf_parselet_response.is_accepted():
+                assert crlf_parselet_response.end != None
+                i = crlf_parselet_response.end
+                self.current_index = i
+                return ParseletResponse(ParseletStatus.Accepted, None, i)
+
+            if crlf_parselet_response.is_unknown():
+                return crlf_parselet_response
+
+            if self.at_eof(i):
+                return ParseletResponse.make_unknown()
+
+            header_pair_parselet_response = self.parse_header_pair_no_content(i)
+            if not header_pair_parselet_response.is_accepted():
+                return header_pair_parselet_response
+            
+            assert header_pair_parselet_response.end != None
+            i = header_pair_parselet_response.end
+
+            self.current_index = i
+
+
+
+    def parse_header_pair_no_content(self, i: int) -> ParseletResponse:
+        def jump_OWS(i: int):
+            while (not self.at_eof(i)):
+                if self.match(r'[\t ]', i):
+                    i += 1
+                else: break
+
+            return i
+
+        key_parselet_response = self.parse_header_key(i)
+        if not key_parselet_response.is_accepted():
+            return key_parselet_response
+
+        assert key_parselet_response.end != None
+        i = key_parselet_response.end
+        
+        if self.at_eof(i):
+            return ParseletResponse.make_unknown()
+
+        colon_match = self.match(r':', i)
+        if not colon_match:
+            return ParseletResponse.make_error()
+        i += 1
+
+        i = jump_OWS(i)
+
+        value_parselet_response = self.parse_header_value(i)
+        if not value_parselet_response.is_accepted():
+            return value_parselet_response
+        
+        assert value_parselet_response.end != None
+        i = value_parselet_response.end
+
+        i = jump_OWS(i)
+
+        crlf_parselet_response = self.parse_CRLF(i)
+        if not crlf_parselet_response.is_accepted():
+            return crlf_parselet_response
+
+        assert crlf_parselet_response.end != None
+        i = crlf_parselet_response.end
+        
+        key = key_parselet_response.content
+        value = value_parselet_response.content
+
+        assert key != None
+        assert value != None
+
+        self.headers[key] = value
+
+        return ParseletResponse(ParseletStatus.Accepted, f"{key}: {value}\r\n", i)
+
+    def parse_CRLF(self, i: int) -> ParseletResponse:
+        cr = self.match(r'\r', i)
+        if not cr:
+            return ParseletResponse.make_error()
+
+        _, i = cr
+
+        if self.at_eof(i):
+            return ParseletResponse.make_unknown()
+
+        lf = self.match(r'\n', i)
+        if not lf:
+            return ParseletResponse.make_error()
+
+        _, i = lf
+
+        return ParseletResponse(ParseletStatus.Accepted, '\r\n', i)
+
+    def parse_header_value(self, i: int) -> ParseletResponse:
+        value = self.parse_regexp_chars(r'[^\r\n]', i)
+        if value.is_accepted():
+            assert value.content != None
+            value.content = value.content.strip()
+            if value.content == '': return ParseletResponse.make_error()
+            return value
+
+        return value
+
+    def parse_header_key(self, i: int) -> ParseletResponse:
+        return self.parse_regexp_chars(r'[^\s:]', i)
+
+    def parse_reason_phrase(self, i: int) -> ParseletResponse:
+        return self.parse_regexp_chars(r'[^\r\n]', i)
+
+    def parse_path(self, i: int) -> ParseletResponse:
+        return self.parse_regexp_chars(r'[^\s]', i)
+
+    def parse_method(self, i: int) -> ParseletResponse:
+        return self.parse_regexp_chars(r'[A-Za-z]', i)
+    
+    def parse_regexp_chars(self, valid_char: str, i: int) -> ParseletResponse:
+        so_far = ''
+
+        while(True):
+            if self.at_eof(i):
+                return ParseletResponse.make_unknown()
+
+            match = self.match(valid_char, i)
+            if match:
+                char, i = match
+                so_far += char
+            else:
+                return ParseletResponse(ParseletStatus.Accepted, so_far, i)
+    
+    def parse_version(self, i : int) -> ParseletResponse:
+        so_far = ''
+        http_parselet_response = self.parse_HTTP(i)
+        if not http_parselet_response.is_accepted():
+            return http_parselet_response
+
+        assert http_parselet_response.end != None
+        i = http_parselet_response.end
+
+        assert http_parselet_response.content != None
+        so_far = http_parselet_response.content
+
+        if self.at_eof(i): return ParseletResponse.make_unknown()
+        
+        slash = self.match(r'/', i)
+        if not slash:
+            return ParseletResponse.make_error()
+        
+        so_far += '/'
+        i += 1
+
+        version_number_parselet_response = self.parse_version_number(i)
+        if not version_number_parselet_response.is_accepted():
+            return version_number_parselet_response
+
+        version = version_number_parselet_response.content
+        assert version != None
+        so_far += version
+
+        assert version_number_parselet_response.end != None
+        i = version_number_parselet_response.end
+
+
+        return ParseletResponse(ParseletStatus.Accepted, so_far, i)
+
+    def parse_HTTP(self, i: int) -> ParseletResponse:
+        expected = 'HTTP'
+        k = 0
+        while(k < len(expected)):
+            if self.at_eof(i):
+                return ParseletResponse.make_unknown()
+            
+            match = self.match(expected[k], i)
+            if match:
+                _, i = match
+                k += 1
+                continue
+            return ParseletResponse.make_error()
+        
+        return ParseletResponse(ParseletStatus.Accepted, expected, i)
+
+    def parse_version_number(self, i: int) -> ParseletResponse:
+        if self.at_eof(i): return ParseletResponse.make_unknown()
+
+        major_match = self.match('1', i)
+        if major_match:
+            _, i = major_match
+        else:
+            return ParseletResponse.make_error()
+
+        if self.at_eof(i): return ParseletResponse.make_unknown()
+        dot_match = self.match(r'\.', i)
+        if dot_match:
+            _, i = dot_match
+        else: return ParseletResponse.make_error()
+
+        if self.at_eof(i): return ParseletResponse.make_unknown()
+        minor_match = self.match(r'[10]', i)
+        if minor_match:
+            minor, i = minor_match
+        else: return ParseletResponse.make_error()
+
+        return ParseletResponse(ParseletStatus.Accepted, f"1.{minor}", i)
+
+    def parse_status_code(self, i: int) -> ParseletResponse:
+        so_far = ''
+
+        for _ in range(3):
+            if self.at_eof(i):
+                return ParseletResponse.make_unknown()
+
+            match = self.match(r'\d', i)
+            if match:
+                char, i = match
+                so_far += char
+            else:
+                return ParseletResponse.make_error()
+
+        return ParseletResponse(ParseletStatus.Accepted, so_far, i)
+
+    def add_chunk(self, chunk: bytes):
+        self.source += chunk.decode('utf-8')
+        self.parse()
+    
+    def advance(self):
+        if self.current_index < len(self.source): self.current_index += 1
+
+    def match(self, regexp: str, i: int) -> tuple[str, int] | None:
+        m = re.match(regexp, self.source[i:])
+        if m:
+            return (m.group(), i + len(m.group()))
+        return None
+
+    def match_alpha(self, i: int) -> tuple[str, int] | None:
+        return self.match(r'[A-Za-z]', i)
+
+    def match_sp(self, i: int) -> tuple[str, int] | None:
+        return self.match(r' ', i)
 
     def at_space(self, i: int | None):
         if i == None: i = self.current_index
         return self.source[i] == ' '
     
-    def match(self, regexp: str) -> bool:
-        m = re.match(regexp, self.source[self.current_index:])
-        if m != None:
-            self.current_index += len(m.group())
-            return True
-        return False
-    
-    def match_SP(self) -> bool:
-        return self.match(' ')
-
-    def match_CRLF(self) -> bool:
-        return self.match(r'\r\n')
-
     def set_error_status(self):
         self.decoder_status = HTTPDecoderStatus.Error
 
@@ -206,24 +495,4 @@ class HTTPDecoder():
     def at_eof(self, i: int | None = None):
         if i == None: i = self.current_index
         return i >= len(self.source)
-
-# def decode_http(source: bytes) -> HTTPRequest | HTTPResponse | None:
-#     decoder = HTTPDecoder(source)
-#     if decoder.decoder_status == HTTPDecoderStatus.Error: return None
-    
-#     version_match = list(filter(lambda v: v.value == decoder.http_version, [v for v in HTTPVersion]))
-#     if len(version_match) != 1:
-#         return None
-    
-
-#     if decoder.type == HTTPType.Request:
-#         if decoder.method == None: raise RuntimeError()
-#         if decoder.body == None: raise RuntimeError()
-#         return HTTPRequest(version_match[0], decoder.method, decoder.headers, decoder.body)
-
-#     if decoder.type == HTTPType.Response:
-#         if decoder.status == None: raise RuntimeError()
-#         if decoder.body == None: raise RuntimeError()
-#         return HTTPResponse(version_match[0], decoder.status, decoder.headers, decoder.body)
-
 

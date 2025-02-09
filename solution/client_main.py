@@ -10,7 +10,11 @@ from http_versions import HTTPVersion
 
 def decode_http_response(data: bytes) -> HTTPResponse:
     decoder = HTTPDecoder(data)
-    return HTTPResponse(decoder.http_version, decoder.status, decoder.headers, decoder.body)
+
+    assert decoder.http_version is not None
+    assert decoder.status is not None
+
+    return HTTPResponse(decoder.http_version, decoder.status, decoder.headers, decoder.remainder)
 
 args = sys.argv[1:]
 args = parse_args(args)
@@ -39,9 +43,9 @@ try:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((host, port))
         s.sendall(bytes(http_request, "utf-8"))
-        response = get_all_data(s, 1024)
+        data = get_all_data(s, 1024)
         s.close()
-    response: HTTPResponse = decode_http_response(response)
+    response: HTTPResponse = decode_http_response(data)
 
     print(json.dumps({
         "status": response.status,
