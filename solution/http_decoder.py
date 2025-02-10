@@ -315,7 +315,7 @@ class HTTPDecoder():
         assert key != None
         assert value != None
 
-        self.headers[key] = value
+        self.headers[key.lower()] = value
 
         return ParseletResponse(ParseletStatus.Accepted, f"{key}: {value}\r\n", i)
 
