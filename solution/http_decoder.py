@@ -48,7 +48,7 @@ class HTTPType(Enum):
 class HTTPDecoder():
 
     def __init__(self, source: bytes) -> None:
-        self.source = source.decode('utf-8')
+        self.source = source.decode('iso-8859-1')
         self.current_index = 0
         self.decoder_status = HTTPDecoderStatus.ParsingStartLine
 
@@ -67,7 +67,7 @@ class HTTPDecoder():
 
     @property
     def remainder(self):
-        return self.source[self.current_index:].encode('utf-8')
+        return self.source[self.current_index:].encode('iso-8859-1')
 
     def parse(self) -> None:
         parsing_start_line = lambda: self.decoder_status == HTTPDecoderStatus.ParsingStartLine
@@ -464,7 +464,7 @@ class HTTPDecoder():
         return ParseletResponse(ParseletStatus.Accepted, so_far, i)
 
     def add_chunk(self, chunk: bytes):
-        self.source += chunk.decode('utf-8')
+        self.source += chunk.decode('iso-8859-1')
         self.parse()
     
     def advance(self):

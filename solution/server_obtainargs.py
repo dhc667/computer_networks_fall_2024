@@ -1,5 +1,5 @@
-def extract_args(self, actual_path):
-    template_path = self.path
+def extract_args(path, actual_path):
+    template_path = path
 
     template_parts = template_path.strip('/').split('/')
     actual_parts = actual_path.strip('/').split('/')

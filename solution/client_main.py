@@ -14,7 +14,7 @@ def decode_http_response(data: bytes) -> HTTPResponse:
     assert decoder.http_version is not None
     assert decoder.status is not None
 
-    return HTTPResponse(decoder.http_version, decoder.status, decoder.headers, decoder.remainder)
+    return HTTPResponse(decoder.status, decoder.headers, decoder.remainder, decoder.http_version)
 
 args = sys.argv[1:]
 args = parse_args(args)
@@ -42,14 +42,14 @@ def get_all_data(socket: socket.socket, buffer_size: int):
 try:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((host, port))
-        s.sendall(bytes(http_request, "utf-8"))
+        s.sendall(bytes(http_request, "iso-8859-1"))
         data = get_all_data(s, 1024)
         s.close()
     response: HTTPResponse = decode_http_response(data)
 
     print(json.dumps({
         "status": response.status,
-        "body": response.body.decode("utf-8"),
+        "body": response.body.decode("iso-8859-1"),
         "headers": response.headers
     }))
         

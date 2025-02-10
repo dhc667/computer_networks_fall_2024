@@ -24,7 +24,7 @@ def encode_http(start_line: str, headers: dict, body: str | None):
 
 def encode_http_response(version: str, status_code: int, headers: dict, body: str | None):
     #  NOTE: We will provide no description for the status code, we must leave the space at the end however
-    status_line = f"{version} {status_code} \r\n"
+    status_line = f"{version} {status_code} "
     return encode_http(status_line, headers, body)
 
 def encode_http_request(version: str, method: str, host: str, port: int, path: str, headers: str | None, body: str | None):

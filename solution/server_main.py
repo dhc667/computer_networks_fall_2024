@@ -5,10 +5,10 @@ from server_obtainargs import extract_args
 
 from http_decoder import HTTPDecoderStatus, HTTPType, HTTPDecoder
 from http_encoder import encode_http_response
-from solution.http_request import HTTPRequest
-from solution.http_response import HTTPResponse, StatusCode
-from solution.http_versions import HTTPVersion
-from solution.server_endpoint import Endpoint
+from http_request import HTTPRequest
+from http_response import HTTPResponse, StatusCode
+from http_versions import HTTPVersion
+from server_endpoint import Endpoint
 
 
 class Server:
@@ -57,6 +57,9 @@ class Server:
                 print("Decoder error, closing connection.")
                 break
 
+            if not active:
+                break
+
             assert decoder.method is not None
             assert decoder.path is not None
             assert decoder.http_version is not None
@@ -88,7 +91,7 @@ class Server:
 
             print(f"Method: {request.method}, Path: {request.path}, Headers: {request.headers}, Body: {request.body}")
 
-            response = HTTPResponse(self.http_version, StatusCode.Status404NotFound.value, {}, None)
+            response = HTTPResponse(StatusCode.Status404NotFound.value, {}, None, self.http_version)
 
             for endpoint in self.endpoints:
                 if endpoint.method == request.method:
@@ -107,9 +110,11 @@ class Server:
         client_socket.close()
 
     def send_response(self, client_socket: socket.socket, response: HTTPResponse):
-        data = encode_http_response(response.version, response.status, response.headers, response.body.decode('utf-8'))
+        data = encode_http_response(response.version, response.status, response.headers, response.body.decode('iso-8859-1'))
 
-        client_socket.sendall(data.encode('utf-8'))
+        print(f'Sending response:\n* -- RESPONSE START -- *\n{data}\n* -- RESPONSE END -- *\n')
+
+        client_socket.sendall(data.encode('iso-8859-1'))
 
 
 

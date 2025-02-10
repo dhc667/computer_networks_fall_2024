@@ -13,7 +13,7 @@ class StatusCode(Enum):
     Status501NotImplemented = 501
 
 class HTTPResponse:
-    def __init__(self, version: str, status: int, headers: dict[str, str], body: bytes | None):
+    def __init__(self, status: int, headers: dict[str, str] = {}, body: bytes | None = None, version: str = HTTPVersion.HTTP1_1.value): 
         if body == None: body = b""
         self.version = version
         self.status = status
