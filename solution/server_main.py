@@ -27,10 +27,14 @@ class Server:
 
     def start(self):
         while True:
-            client_socket, client_address = self.server_socket.accept()
-            print(f"Connection from {client_address}")
-            client_thread = threading.Thread(target=self.handle_client, args=(client_socket,))
-            client_thread.start()
+            try:
+                client_socket, client_address = self.server_socket.accept()
+                print(f"Connection from {client_address}")
+                client_thread = threading.Thread(target=self.handle_client, args=(client_socket,), daemon=True)
+                client_thread.start()
+            except Exception:
+                self.server_socket.close()
+                raise
 
     def handle_client(self, client_socket):
         client_socket.settimeout(10)  # Timeout for idle connections
