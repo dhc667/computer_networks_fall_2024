@@ -51,9 +51,7 @@ def fib_handle(args: dict[str, str], _: HTTPRequest) -> HTTPResponse:
     fib = lambda x: 1 if x <= 1 else fib(x - 1) + fib(x - 2)
 
     n = int(args['n'])
-
-    if n <= 1: answ = 1
-    else: answ = fib(n - 1) + fib(n - 2)
+    answ = fib(n)
 
     encoded_answ = str(answ).encode('iso-8859-1')
 
@@ -93,6 +91,30 @@ server.add_endpoint(Endpoint(
     'GET',
     '/sleep/:time',
     wait_handle
+))
+
+def receive_png_handler(args: dict[str, str], req: HTTPRequest) -> HTTPResponse:
+    content_length = int(req.headers['content-length'])
+    body = req.body
+
+    with open('./our_tests/received/png1.png', 'wb') as f:
+        f.write(body)
+
+    answ = b'File received'
+
+    return HTTPResponse(
+        200,
+        {
+            'Content-type': 'text/plain',
+            'Content-length': str(len(answ))        
+        },
+        answ
+    )
+
+server.add_endpoint(Endpoint(
+    'POST',
+    '/receive_png',
+    receive_png_handler
 ))
 
 server.start()
