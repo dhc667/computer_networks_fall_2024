@@ -16,6 +16,7 @@ class Server:
         self.ip = ip
         self.port = port
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.server_socket.bind((self.ip, self.port))
         self.server_socket.listen(listen)
         self.endpoints: list[Endpoint] = []
@@ -32,7 +33,7 @@ class Server:
                 print(f"Connection from {client_address}")
                 client_thread = threading.Thread(target=self.handle_client, args=(client_socket,), daemon=True)
                 client_thread.start()
-            except Exception:
+            except:
                 self.server_socket.close()
                 raise
 
